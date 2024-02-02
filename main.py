@@ -1,6 +1,12 @@
 import os
 import math
+import csv
+import re
+
 import numpy as np
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 
 '''
 Analysis steps:
@@ -22,9 +28,25 @@ def file_reader(file):
         yield line
 
 
+pvt_player_result = None
+
+
+for file in os.listdir():
+    if not re.match(r'\d{4}_\d{2}V\d{2}\.log', file):
+        continue
+    else:
+        pvt_player_result = file
+        break
+
+
+if pvt_player_result is None:
+    exit("File with PVT results is not found")
+
+
 # Creating file with PPP solutions satisfying accuracy threshold
-with open('pvtPlayer.A.result.log', 'w') as file:
-    with open('pvtPlayer.A.log', 'r', encoding='utf-8', errors='ignore') as f:
+with open('pvtPlayer.filter.result.log', 'w') as file:
+    with open(f'{pvt_player_result}', 'r', encoding='utf-8', errors='ignore') as f:
+        pvt_ver = f.name.split('.')[0]
         for line in f:
             if '$NAV,13,' in line:
                 string = line.split(',')
@@ -34,9 +56,9 @@ with open('pvtPlayer.A.result.log', 'w') as file:
                 continue
 
 
-with open('reftrajectory.result.log', 'w') as result:
-    with open('pvtPlayer.A.result.log') as source1:
-        source2 = open('NAVrtk_ref_from_DK.log')
+with open(f'{pvt_ver}.result.log', 'w') as result:
+    with open('pvtPlayer.filter.result.log') as source1:
+        source2 = open('NAVrtk_ref.log')
         ref_file = file_reader(source2)
         for ppp in source1:
             while True:
@@ -65,20 +87,20 @@ with open('reftrajectory.result.log', 'w') as result:
                         break
                 except StopIteration:
                     source2.close()
-                    source2 = open('NAVrtk_ref_from_DK.log')
+                    source2 = open('NAVrtk_ref.log')
                     ref_file = file_reader(source2)
                     break
 
     lat_mean = sum(lat_err)/len(lat_err)
     lon_mean = sum(lon_err)/len(lon_err)
 
+
     lat_err_minus_mean = [x-lat_mean for x in lat_err]
     lon_err_minus_mean = [x-lon_mean for x in lon_err]
 
     hor_err = [math.sqrt(lat_err**2+lon_err**2) for lat_err, lon_err in list(zip(lat_err_minus_mean, lon_err_minus_mean))]
 
-
-    HRMS = math.sqrt(sum(list(map(lambda x: x**2,hor_err)))/len(hor_err))
+    HRMS = math.sqrt(sum(list(map(lambda x: x**2,hor_err)))/(len(hor_err)-1))
 
     result.write(
     f"""
@@ -88,7 +110,7 @@ with open('reftrajectory.result.log', 'w') as result:
         Min = {min(hor_err)}
         Max = {max(hor_err)}
         P50 = {np.percentile(np.array(hor_err), 50)}
-        P90 = {np.percentile(np.array(hor_err), 90)}
+        P95 = {np.percentile(np.array(hor_err), 95)}
         Stdev = {np.std(np.array(hor_err))}
         HRMS = {HRMS}
     ----------------------------
@@ -97,3 +119,7 @@ with open('reftrajectory.result.log', 'w') as result:
     {hor_err}
     """
     )
+
+with open(f'{pvt_ver}.csv', 'w') as csv_file:
+    write = csv.writer(csv_file)
+    write.writerow(hor_err)
