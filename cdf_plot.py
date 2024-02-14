@@ -19,7 +19,7 @@ with open(f'{files_result[0]}') as f1:
         if 'HRMS' in line:
             HRMS_1 = round(float(line.split('=')[1]),3)
             break
-with open(f'{files_result[0]}') as f2:
+with open(f'{files_result[1]}') as f2:
     for line in f2:
         if 'P50' in line:
             p50_2 = round(float(line.split('=')[1]),3)
@@ -28,7 +28,7 @@ with open(f'{files_result[0]}') as f2:
         if 'HRMS' in line:
             HRMS_2 = round(float(line.split('=')[1]),3)
             break
-with open(f'{files_result[0]}') as f3:
+with open(f'{files_result[2]}') as f3:
     for line in f3:
         if 'P50' in line:
             p50_3 = round(float(line.split('=')[1]),3)
